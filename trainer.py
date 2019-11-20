@@ -119,7 +119,7 @@ class KDMultiTaskTrainer(BaseTrainer):
 
     # SET kd_type to kd_loss for KD, self for self training on unlabelled
     def distillation_loss(self, y, labels, teacher_scores, alpha = 0.95, reduction_kd='mean', temp = 5.0):
-        T = temp
+        T = self.temp
         d_loss = 0.0
         nll_loss = 0.0
         if self.kd_type == 'self':
