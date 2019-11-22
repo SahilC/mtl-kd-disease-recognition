@@ -36,6 +36,7 @@ def run(batch_size, epochs, val_split, num_workers, print_every,
     val_size = int(val_split * dset_len)
     test_size = int(0.15 * dset_len)
     train_size = dset_len - val_size - test_size
+    trainset_percent = (1 - val_split - 0.15)
 
 
     train_dataset_small, val_dataset, test_dataset = torch.utils.data.random_split(val_from_images,
@@ -103,15 +104,15 @@ def run(batch_size, epochs, val_split, num_workers, print_every,
 
     # =============================== PRE-TRAIN KD MODEL on small labelled data ========================
     optimizer = torch.optim.SGD(model.parameters(),
-                                weight_decay=weight_decay,
-                                momentum=momentum,
-                                lr=lr,
-                                nesterov=True)
+                                 weight_decay=weight_decay,
+                                 momentum=momentum,
+                                 lr=lr,
+                                 nesterov=True)
     scheduler = ReduceLROnPlateau(optimizer,
-                                  factor=0.5,
-                                  patience=3,
-                                  min_lr=1e-7,
-                                  verbose=True)
+                                   factor=0.5,
+                                   patience=3,
+                                   min_lr=1e-7,
+                                   verbose=True)
     trainset_percent = (1 - val_split - 0.15)
     trainer = KDMultiTaskTrainer(model, kd_model, optimizer, scheduler, criterion,
             tasks, epochs, lang, print_every =  print_every, trainset_split = trainset_percent, distill_temp = distill_temp, kd_type = 'nll_only')
@@ -119,6 +120,8 @@ def run(batch_size, epochs, val_split, num_workers, print_every,
 
     # Load best KD model into model
     kd_model.load_state_dict(torch.load(os.path.join(trainer.save_location_dir,'best_model.pt')))
+    # kd_model.load_state_dict(torch.load('/data2/sachelar/small_models/models/nll_only-{:.1f}-{}/best_model.pt'.format(round(trainset_percent,1), str(tasks[0]))))
+    # model.load_state_dict(torch.load('/data2/sachelar/small_models/models/nll_only-{:.1f}-{}/best_model.pt'.format(round(trainset_percent, 1), str(tasks[0]))))
 
     val_loss, total_d_acc, total_acc, bleu, total_f1,total_recall, total_precision, sent_gt, sent_pred, total_topk,per_disease_topk, per_disease_bleu, total_cm = trainer.validate(test_loader)
 
@@ -144,7 +147,6 @@ def run(batch_size, epochs, val_split, num_workers, print_every,
                                   patience=3,
                                   min_lr=1e-7,
                                   verbose=True)
-    trainset_percent = (1 - val_split - 0.15)
 
     trainer = KDMultiTaskTrainer(model, kd_model, optimizer, scheduler, criterion,
             tasks, epochs, lang, print_every =  print_every, trainset_split = trainset_percent, distill_temp = distill_temp, kd_type = 'full')
@@ -201,17 +203,18 @@ def run(batch_size, epochs, val_split, num_workers, print_every,
     trainer.test(test_loader)
 
 if __name__ == "__main__":
-    temp_configs = [0.5, 1.0, 5.0, 10.0, 100]
+    # temp_configs = [5.0, 10.0]
+    # temp_configs = [1.0, 100.0]
     val_configs = [0.15, 0.25, 0.4, 0.55, 0.7]
     # val_configs = [0.15, 0.20.7]
-    # task_configs = [[0], [1],[2],[0,1],[1,2],[0,2], [0, 1, 2]]
-    task_configs = [[0], [1],[2]]
+    task_configs = [[0,1],[1,2],[0,2], [0, 1, 2]]
+    # task_configs = [[0], [1],[2]]
 
     # task_configs = [[1]]
     # task_configs = [[1],[2],[0,1],[1,2],[0,2], [0, 1,2]]
     # task_configs = [[0,1,2]]
-    for d in temp_configs:
-        for v in val_configs:
+    d = 5.0
+    for v in val_configs:
             for t in task_configs:
                 try:
                     print("Running", (1 - v - 0.15), t, d)
