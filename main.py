@@ -213,11 +213,14 @@ if __name__ == "__main__":
     # task_configs = [[1]]
     # task_configs = [[1],[2],[0,1],[1,2],[0,2], [0, 1,2]]
     # task_configs = [[0,1,2]]
+    temperatures = {'0.70':(5,5,5),'0.60':(5, 10, 5),'0.45':(1, 5, 5),'0.30':(5,10,10),'0.15':(10, 10, 10)}
     d = 5.0
     for v in val_configs:
             for t in task_configs:
                 try:
-                    print("Running", (1 - v - 0.15), t, d)
+                    train_split = '{:.2f}'.format(round(1 - v - 0.15, 2))
+                    d = temperatures[train_split]
+                    print("Running", train_split, t, d)
                     gin.parse_config_file('config_small.gin')
                     gin.bind_parameter('run.val_split', v)
                     gin.bind_parameter('run.tasks', t)

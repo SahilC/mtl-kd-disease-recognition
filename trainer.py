@@ -118,8 +118,8 @@ class KDMultiTaskTrainer(BaseTrainer):
                         results.write(name[j]+','+ind2word[labels[j].item()] +','+ind2word[pred[j].item()] +'\n')
 
     # SET kd_type to kd_loss for KD, self for self training on unlabelled
-    def distillation_loss(self, y, labels, teacher_scores, alpha = 0.95, reduction_kd='mean', temp = 5.0):
-        T = self.temp
+    def distillation_loss(self, y, labels, teacher_scores, alpha = 0.95, reduction_kd='mean', task = 0):
+        T = self.temp[task]
         d_loss = 0.0
         nll_loss = 0.0
         if self.kd_type == 'self':
@@ -146,11 +146,11 @@ class KDMultiTaskTrainer(BaseTrainer):
        t_f_labels = t_f_labels.detach()
        t_text = t_text.detach()
 
-       loss1,_,_ = self.distillation_loss(disease, labels, t_labels)
-       loss2,_,_ = self.distillation_loss(f_disease, f_labels, t_f_labels)
+       loss1,_,_ = self.distillation_loss(disease, labels, t_labels, task=0)
+       loss2,_,_ = self.distillation_loss(f_disease, f_labels, t_f_labels, task=1)
        loss3 = torch.tensor(0.0).cuda()
        for k in range(text_pred.size(1)):
-           temp, _ ,_ = self.distillation_loss(text_pred[:, k].squeeze(), text[:, k + 1].squeeze(), t_text[:, k].squeeze())
+           temp, _ ,_ = self.distillation_loss(text_pred[:, k].squeeze(), text[:, k + 1].squeeze(), t_text[:, k].squeeze(), task=2)
            loss3 += temp
        loss = torch.stack((loss1,loss2, loss3))[self.tasks].sum()
        return loss, loss1, loss2, loss3
