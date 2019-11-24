@@ -24,6 +24,13 @@ torch.backends.cudnn.deterministic = True
 torch.backends.cudnn.benchmark = False
 np.random.seed(seed)
 
+def init_kd_models(kd_list, dataset_size):
+    model_list = {(0):'/data2/sachelar/teachers/',
+            (1):'/data2/sachelar/teachers/', (2):'/data2/sachelar/teachers/',
+            (0,1):'/data2/sachelar/teachers/',(0,2):'/data2/sachelar/teachers/',(1,2):'/data2/sachelar/teachers/'}
+    for a, (i, j) in enumerate(kd_list):
+        j.load_state_dict(model_list[i]+dataset_size +'_'+'_'.join(i)+'/best_model.pt')
+
 @gin.configurable
 def run(batch_size, epochs, val_split, num_workers, print_every,
         trainval_csv_path, test_csv_path, model_type, tasks, lr, weight_decay, 
@@ -91,6 +98,12 @@ def run(batch_size, epochs, val_split, num_workers, print_every,
     kd_model = MultiTaskModel(kd_model, vocab_size = lang.n_words, model_type = model_type)
     kd_model = nn.DataParallel(kd_model)
 
+    kd_list = {(0):copy.deepcopy(kd_model), (1):copy.deepcopy(kd_model), (2):copy.deepcopy(kd_model), (0,1):copy.deepcopy(kd_model),(0,2):copy.deepcopy(kd_model),(1,2):copy.deepcopy(kd_model)}
+
+
+    dataset_size = '{:.2f}'.format(round(trainset_percent, 2))
+    init_kd_models(kd_list, dataset_size)
+
     model.load_state_dict(torch.load('/data2/sachelar/models/pretrained_patient_level_filtered/best_model.pt'))
 
     print(kd_model)
@@ -114,7 +127,7 @@ def run(batch_size, epochs, val_split, num_workers, print_every,
                                    min_lr=1e-7,
                                    verbose=True)
     trainset_percent = (1 - val_split - 0.15)
-    trainer = KDMultiTaskTrainer(model, kd_model, optimizer, scheduler, criterion,
+    trainer = KDMultiTaskTrainer(model, kd_model, kd_list, optimizer, scheduler, criterion,
             tasks, epochs, lang, print_every =  print_every, trainset_split = trainset_percent, distill_temp = distill_temp, kd_type = 'nll_only')
     trainer.train(train_loader_small, val_loader)
 
@@ -148,7 +161,7 @@ def run(batch_size, epochs, val_split, num_workers, print_every,
                                   min_lr=1e-7,
                                   verbose=True)
 
-    trainer = KDMultiTaskTrainer(model, kd_model, optimizer, scheduler, criterion,
+    trainer = KDMultiTaskTrainer(model, kd_model, kd_list, optimizer, scheduler, criterion,
             tasks, epochs, lang, print_every =  print_every, trainset_split = trainset_percent, distill_temp = distill_temp, kd_type = 'full')
     trainer.train(train_loader_small, val_loader)
 
@@ -184,7 +197,7 @@ def run(batch_size, epochs, val_split, num_workers, print_every,
 
     # Init model with best KD model weights
 
-    trainer = KDMultiTaskTrainer(model, kd_model, optimizer, scheduler, criterion, tasks, epochs, lang, print_every =  print_every, trainset_split = trainset_percent, distill_temp = distill_temp, kd_type = 'kd_only')
+    trainer = KDMultiTaskTrainer(model, kd_model, kd_list, optimizer, scheduler, criterion, tasks, epochs, lang, print_every =  print_every, trainset_split = trainset_percent, distill_temp = distill_temp, kd_type = 'kd_only')
     trainer.train(train_loader, val_loader)
 
     val_loss, total_d_acc, total_acc, bleu, total_f1,total_recall, total_precision, sent_gt, sent_pred, total_topk,per_disease_topk, per_disease_bleu, total_cm = trainer.validate(test_loader)

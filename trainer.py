@@ -44,10 +44,11 @@ class BaseTrainer(object):
 
 
 class KDMultiTaskTrainer(BaseTrainer):
-    def __init__(self, model, kd_model, optimizer, scheduler, criterion, tasks, epochs, lang, print_every = 100, min_val_loss = 100, trainset_split = 0.85, distill_temp = 5, kd_type = 'full'):
+    def __init__(self, model, kd_model, kd_list, optimizer, scheduler, criterion, tasks, epochs, lang, print_every = 100, min_val_loss = 100, trainset_split = 0.85, distill_temp = 5, kd_type = 'full'):
         super(KDMultiTaskTrainer, self).__init__(model, optimizer, scheduler, criterion, epochs, print_every, min_val_loss)
         self.lang = lang
         self.kd_model = kd_model
+        self.kd_list = kd_list
         self.kd_model.eval()
         self.kd_type = kd_type
         self.temp = distill_temp
@@ -176,11 +177,21 @@ class KDMultiTaskTrainer(BaseTrainer):
                self.optimizer.zero_grad()
                teacher_preds = self.kd_model(images, text)
                disease, f_disease, text_pred = self.model(images, text)
+               val = (disease, f_disease, text_pred)
 
                loss, loss1, loss2, loss3 = self.compute_loss((disease, f_disease, text_pred), (labels, f_labels, text), teacher_preds)
 
-               # Only consider tasks defined in the task list
+               # teacher ensemble loss
+               tloss = 0.0
+               for i, j in self.kd_list:
+                   for k in self.tasks:
+                       if k in i:
+                           output = j(images, text)[k]
+                           y = val[k]
+                           T = self.temp[k]
+                           tloss += torch.nn.KLDivLoss(reduction='mean')(F.log_softmax(y/ T, dim= -1), F.softmax(output / T, dim=-1)) * T * T
                
+               loss += tloss
                loss.backward()
                self.optimizer.step()
 
