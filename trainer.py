@@ -52,7 +52,7 @@ class KDMultiTaskTrainer(BaseTrainer):
         self.kd_type = kd_type
         self.temp = distill_temp
         self.tasks = tasks
-        self.save_location_dir = os.path.join('/data2/sachelar/models', kd_type + '-' + str(trainset_split) + '-' + '_'.join(str(t) for t in self.tasks) +'-'+ str(distill_temp) +'-'+ str(datetime.now()).replace(' ',''))
+        self.save_location_dir = os.path.join('/data2/sachelar/models', kd_type + '-' + str(trainset_split) + '-' + '_'.join(str(t) for t in self.tasks) +'-'+ '_'.join(str(t) for t in distill_temp) +'-'+ str(datetime.now()).replace(' ',''))
         self.init_saves()
 
     def train(self, train_loader, val_loader):
