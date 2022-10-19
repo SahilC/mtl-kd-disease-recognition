@@ -8,6 +8,10 @@ need for predictions across multiple tasks, handling image variations, and large
 
 Link to paper:- https://openaccess.thecvf.com/content/WACV2021/papers/Chelaramani_Multi-Task_Knowledge_Distillation_for_Eye_Disease_Prediction_WACV_2021_paper.pdf
 
+<b>Architecture Diagram</b>
+
+<img src ='mtl-kd-img.png' />
+
 Run the code with:- 
 ```
 python main.py
